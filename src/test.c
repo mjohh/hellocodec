@@ -27,9 +27,11 @@ int main() {
 */
 
 
+extern void test_yuv_to_blocks();
 
 int main() {
     test_rgb_yuv();
     test_load_rgb();
+    test_yuv_to_blocks();
 }
 
