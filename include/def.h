@@ -2,6 +2,7 @@
 #define __def_h__
 
 typedef unsigned char uint8;
+typedef unsigned int uint;
 //typedef uint8 rgb[3];
 //typedef uint8 yuv[3];
 
