@@ -1,5 +1,6 @@
 #include<stdio.h>
 #include<math.h>
+#include<assert.h>
 #include "def.h"
 
 //typedef unsigned char uint8;
@@ -38,8 +39,8 @@ void rgb_to_yuv(uint8* r, uint8* g, uint8* b, uint8* y, uint8* u, uint8* v, int 
 void yuv_to_blocks(uint8* y, uint8* u, uint8* v, int w, int h, 
     uint8 yblocks[][64], uint8 ublocks[][64], uint8 vblocks[][64]) {
     
-    int nwblock = w/8 + (w%8==0 ? 0 : 1);
-    int nhblock = h/8 + (h%8==0 ? 0 : 1);
+    int nwblock = w/8 + (w%8 ? 1 : 0);
+    int nhblock = h/8 + (h%8 ? 1 : 0);
     
     for (int blockrow = 0; blockrow < nhblock; blockrow++) {
         for (int blockcol = 0; blockcol < nwblock; blockcol++) {
@@ -70,52 +71,71 @@ void yuv_to_blocks(uint8* y, uint8* u, uint8* v, int w, int h,
     }
 }
 
-void test_rgb_yuv() {
-    uint8 v = BOUND(-1, 0, 2);
-    printf("v=%d", v);
 
-    v = BOUND(1, 0, 2);
-    printf("v=%d", v);
-
-    v = BOUND(3, 0, 2);
-    printf("v=%d", v);
-
-    do{
-    uint8 y=0;
-    uint8 u=0;
-    uint8 v=0;
-    _rgb_to_yuv(255, 255, 255, &y, &u, &v);
-    printf("\ny,u,v=%d,%d,%d", y, u, v);
+void yuv_to_blocks8x8(uint8* y, uint8* u, uint8* v, int w, int h, 
+    uint8 yblocks[][64], uint8 ublocks[][64], uint8 vblocks[][64], int nwblocks, int nhblocks) {
     
-    //_rgb_to_yuv(256, 355, 255, &y, &u, &v);
-    //printf("\ny,u,v=%d,%d,%d", y, u, v);
-    }while(0);
+    int nw = w/8 + (w%8 ? 1 : 0);
+    int nh = h/8 + (h%8 ? 1 : 0);
+    assert(nw == nwblocks);
+    assert(nh == nhblocks);
+ 
+    int ww = nwblocks * 8;
+    int hh = nhblocks * 8;
+    uint8* pyblocks = (uint8*)yblocks;
+    uint8* publocks = (uint8*)ublocks;
+    uint8* pvblocks = (uint8*)vblocks;
+    
+
+    for (int r = 0; r < hh; r++) {
+        for (int c = 0; c < ww; c++) {
+            int i = r * w + c;
+            int ii = r * ww + c;
+            if (r < h && c < w) {
+                pyblocks[ii] = y[i];
+                publocks[ii] = u[i];
+                pvblocks[ii] = v[i];
+            } else {
+                pyblocks[ii] = 0;
+                publocks[ii] = 0;
+                pvblocks[ii] = 0;  
+            }
+        }
+    }
 }
 
-void test_yuv_to_blocks() {
-    uint8 y[64];
-    int w = 8;
-    int h = 8;
-    for (int i = 0; i < 64; i++) {
-        y[i] = i;
-    }
 
-    uint8 yblocks[64];
-    uint8 ublocks[64];
-    uint8 vblocks[64];
+void yuv_to_blocks8x8_2(uint8* y, uint8* u, uint8* v, int w, int h, 
+    uint8 yblocks[][64], uint8 ublocks[][64], uint8 vblocks[][64]) {
 
-    yuv_to_blocks(y, y, y, w, h, &yblocks, &ublocks, &vblocks);
-    
-    for (int i = 0; i < 64; i++) {
-        printf("%d\n", yblocks[i]);
-    }
-    printf("-------------------\n");
-    for (int i = 0; i < 64; i++) {
-        printf("%d\n", ublocks[i]);
-    }
-    printf("-------------------\n");
-    for (int i = 0; i < 64; i++) {
-        printf("%d\n", vblocks[i]);
+    int ww = w / 8 + (w % 8 ? 1 : 0);
+    int hh = h / 8 + (h % 8 ? 1 : 0);
+
+    for (int rowb = 0; rowb < hh; rowb++) {
+        for (int colb = 0; colb < ww; colb++) {
+            // index of block in yblocks
+            int ib =  rowb * ww + colb;
+
+            // visit within block
+            for (int r = 0;  r < 8; r++) {
+                for (int c = 0; c < 8; c++) {
+
+                    // map to idx of extended uint8 matrix
+                    int i = rowb * 8 + r;
+                    int j = colb * 8 + c;
+                    if (i < h && j < w) {
+                        yblocks[ib][r*8+c] = y[i*w+j];
+                        ublocks[ib][r*8+c] = u[i*w+j];
+                        vblocks[ib][r*8+c] = v[i*w+j];
+                    } else {
+                        yblocks[ib][r*8+c] = 0;
+                        ublocks[ib][r*8+c] = 0;
+                        vblocks[ib][r*8+c] = 0;
+                    }
+                }
+            }
+ 
+        }
     }
     
 }

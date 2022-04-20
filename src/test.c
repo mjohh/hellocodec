@@ -28,10 +28,14 @@ int main() {
 
 
 extern void test_yuv_to_blocks();
+extern void test_yuv_to_blocks8x8();
+extern void test_yuv_to_blocks8x8_2();
 
 int main() {
     test_rgb_yuv();
     test_load_rgb();
     test_yuv_to_blocks();
+    test_yuv_to_blocks8x8();
+    test_yuv_to_blocks8x8_2();
 }
 
