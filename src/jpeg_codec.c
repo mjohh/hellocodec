@@ -317,7 +317,7 @@ static int s_std_quant_tab_chrom[64] = {
 
 void quant_encode8x8(int *data8x8, bool luminance) {
     for (int i = 0; i < 64; i++) {
-        if (lumiance) {
+        if (luminance) {
             data8x8[i] /= s_std_quant_tab_lumin[i];
         } else {
             data8x8[i] /= s_std_quant_tab_chrom[i];
@@ -336,4 +336,38 @@ void fdct_2_quant(int (*ydct)[64], int (*udct)[64], int (*vdct)[64], int w, int 
         quant_encode8x8(udct[i], 0);
         quant_encode8x8(vdct[i], 0);
     }    
+}
+
+static int s_zigzag_index_8x8[] = {
+    0,  1,  8,  16, 9,  2,  3,  10,
+    17, 24, 32, 25, 18, 17, 4,  5, 
+    12, 19, 26, 33, 40, 48, 41, 34,
+    27, 20, 13, 6,  7,  14, 21, 28,
+    35, 42, 49, 56, 57, 50, 43, 36, 
+    29, 22, 15, 23, 30, 37, 44, 51, 
+    58, 59, 52, 45, 38, 31, 39, 46, 
+    53, 60, 61, 54, 47, 55, 62, 63,
+};
+
+void jpeg_zigzag(int* data8x8) {
+    int tmp[64];
+   
+    for (int i = 0; i < 64; i++) {
+        tmp[i] = data8x8[s_zigzag_index_8x8[i]];
+    }
+    for (int i = 0; i < 64; i++) {
+        data8x8[i] = tmp[i];
+    }
+}
+
+void quant_2_zigzag(int (*yquant)[64], int (*uquant)[64], int (*vquant)[64], uint w, uint h) {
+    int nwb = w / 8 + (w%8 ? 1 : 0);
+    int nhb = h / 8 + (h%8 ? 1 : 0);
+    int nb = nwb * nhb;
+
+    for (int i = 0; i < nb; i++) {
+        jpeg_zigzag(yquant[i]);
+        jpeg_zigzag(uquant[i]);
+        jpeg_zigzag(vquant[i]);
+    }
 }
