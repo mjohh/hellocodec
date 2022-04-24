@@ -293,3 +293,47 @@ void blocks_fdct(const uint8 (*yblocks)[64], const uint8 (*ublocks)[64], const u
     }
 }
 
+static int s_std_quant_tab_lumin[64] = {
+    16, 11, 10, 16, 24, 40, 51, 61,
+    12, 12, 14, 19, 26, 58, 60, 55,
+    14, 13, 16, 24, 40, 57, 69, 56,
+    14, 17, 22, 29, 51, 87, 80, 62,
+    18, 22, 37, 56, 68, 109, 103, 77,
+    24, 36, 55, 64, 81, 104, 113, 92,
+    49, 64, 78, 87, 103, 121, 120, 101,
+    72, 92, 95, 98, 112, 100, 103, 99,
+};
+
+static int s_std_quant_tab_chrom[64] = {
+    17, 18, 24, 47, 99, 99, 99, 99,
+    18, 21, 26, 66, 99, 99, 99, 99,
+    24, 26, 56, 99, 99, 99, 99, 99,
+    47, 66, 99, 99, 99, 99, 99, 99,
+    99, 99, 99, 99, 99, 99, 99, 99,
+    99, 99, 99, 99, 99, 99, 99, 99,
+    99, 99, 99, 99, 99, 99, 99, 99,
+    99, 99, 99, 99, 99, 99, 99, 99,
+};
+
+void quant_encode8x8(int *data8x8, bool luminance) {
+    for (int i = 0; i < 64; i++) {
+        if (lumiance) {
+            data8x8[i] /= s_std_quant_tab_lumin[i];
+        } else {
+            data8x8[i] /= s_std_quant_tab_chrom[i];
+        }
+    }
+}
+
+void fdct_2_quant(int (*ydct)[64], int (*udct)[64], int (*vdct)[64], int w, int h) {
+
+    int nwb = w / 8 + (w % 8 ? 1 : 0);
+    int nhb = h / 8 + (h % 8 ? 1 : 0);
+    int nb = nwb * nhb;
+    
+    for (int i = 0; i < nb; i++) {
+        quant_encode8x8(ydct[i], 1);
+        quant_encode8x8(udct[i], 0);
+        quant_encode8x8(vdct[i], 0);
+    }    
+}
