@@ -142,6 +142,7 @@ void yuv_to_blocks8x8_2(uint8* y, uint8* u, uint8* v, int w, int h,
 #define DCT_SIZE 8
 #define FIX_Q 11
 static int s_factor[64];
+static int s_factor_inited = 0;
 
 const float AAN_DCT_FACTOR[DCT_SIZE] = {
     1.0f, 1.387039845f, 1.306562965f, 1.175875602f,
@@ -153,12 +154,21 @@ int float_2_fixed(float v) {
 }
 
 void init_factor() {
+    s_factor_inited = 1;
     for (int i = 0; i < DCT_SIZE; i++) {
         for (int j = 0; j < DCT_SIZE; j++) {
             float tmp = 1.0f / (AAN_DCT_FACTOR[i] * AAN_DCT_FACTOR[i] * 8); 
             s_factor[i*DCT_SIZE+j] = float_2_fixed(tmp);
         }
     }
+}
+
+int* get_factor_tab() {
+    if (!s_factor_inited) {
+        init_factor() ;
+        s_factor_inited = 1;
+    }
+    return s_factor;
 }
 
 void fdct_2d_8x8(int *data8x8, int* ftab) {
@@ -263,7 +273,10 @@ void fdct_2d_8x8(int *data8x8, int* ftab) {
         dataptr++;  /* advance pointer to next column */
     }
 
-    ftab = ftab ? ftab : s_factor;
+    // ftab = ftab ? ftab : s_factor;
+    if (ftab == NULL) {
+        ftab = get_factor_tab();
+    }
     for (ctr = 0; ctr < 64; ctr++) {
         data8x8[ctr] *= ftab[ctr];
         data8x8[ctr] >>= FIX_Q + 2;
@@ -285,7 +298,7 @@ void blocks_fdct(const uint8 (*yblocks)[64], const uint8 (*ublocks)[64], const u
             
             ydct[b][i] = ydct[b][i] << 2;
             udct[b][i] = udct[b][i] << 2;
-            vdct[b][i] = ydct[b][i] << 2;
+            vdct[b][i] = vdct[b][i] << 2;
         }
         fdct_2d_8x8(ydct[b], NULL);
         fdct_2d_8x8(udct[b], NULL);

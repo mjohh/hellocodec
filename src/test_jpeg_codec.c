@@ -1,4 +1,5 @@
 #include<stdio.h>
+#include<stdlib.h>
 #include<math.h>
 #include<assert.h>
 #include "def.h"
@@ -8,10 +9,18 @@
 extern void _rgb_to_yuv(uint8 r, uint8 g, uint8 b, uint8* y, uint8* u, uint8* v);
 extern void yuv_to_blocks8x8(uint8* y, uint8* u, uint8* v, int w, int h,
     uint8 yblocks[][64], uint8 ublocks[][64], uint8 vblocks[][64], int nwblocks, int nhblocks);
-void yuv_to_blocks(uint8* y, uint8* u, uint8* v, int w, int h,
+extern void yuv_to_blocks(uint8* y, uint8* u, uint8* v, int w, int h,
     uint8 yblocks[][64], uint8 ublocks[][64], uint8 vblocks[][64]);
-void yuv_to_blocks8x8_2(uint8* y, uint8* u, uint8* v, int w, int h,
+extern void yuv_to_blocks8x8_2(uint8* y, uint8* u, uint8* v, int w, int h,
     uint8 yblocks[][64], uint8 ublocks[][64], uint8 vblocks[][64]);
+extern int load_rgb(const char* rgb_file, uint8** r, uint8** g, uint8** b, int* w, int* h); 
+extern void free_rgb(uint8* rgb);
+extern void rgb_to_yuv(uint8* r, uint8* g, uint8* b, uint8* y, uint8* u, uint8* v, int w, int h);
+extern void quant_2_zigzag(int (*yquant)[64], int (*uquant)[64], int (*vquant)[64], uint w, uint h);
+extern void blocks_fdct(const uint8 (*yblocks)[64], const uint8 (*ublocks)[64], const uint8 (*vblocks)[64],
+    uint w, uint h, int (*ydct)[64], int (*udct)[64], int (*vdct)[64]);
+void fdct_2_quant(int (*ydct)[64], int (*udct)[64], int (*vdct)[64], int w, int h);
+
 
 void test_rgb_yuv() {
     uint8 v = BOUND(-1, 0, 2);
@@ -309,4 +318,99 @@ void test_yuv_to_blocks8x8() {
            printf("\n");
        }
     } while(0);
+}
+
+//void print_blocks(int(*blocks)[64], int nw, int nh) {
+#define PRNT_BLOCKS(blocks, nw, nh)\
+    for (int i = 0; i < nw*nh; i++) {\
+        for (int j = 0; j < 8; j++) {\
+            for (int k = 0; k < 8; k++) {\
+                printf("%d, ", blocks[i][j*8+k]);\
+            }\
+            printf("\n");\
+        }\
+        printf("\n\n");\
+    }
+
+void test_codec_pipeline() {
+    // load rgb
+
+    uint8* r = NULL;
+    uint8* g = NULL;
+    uint8* b = NULL;
+    int w = 0;
+    int h = 0;
+    // char* sfile = "/Users/mjohh/Documents/hellocodec/src/room.txt";
+    // 相对于可执行文件
+    char* sfile = "py/room.txt";
+
+    int ret = load_rgb(sfile, &r, &g, &b, &w, &h);
+    printf("ret=%d, w=%d, h=%d\n", ret, w, h);
+    //int i = 0;
+    //for (i=0; i<w*h; i++) {
+    //    printf("%d,%d,%d\n", r[i], g[i], b[i]);
+    //}
+
+    // rgb to yuv
+    uint8* y = malloc(w*h);
+    uint8* u = malloc(w*h);
+    uint8* v = malloc(w*h);
+    assert(y);
+    assert(u);
+    assert(v);
+    rgb_to_yuv(r, g, b, y, u, v, w, h);
+
+    // yuv to blocks
+    int nwb = w/8 + (w%8 ? 1 : 0);
+    int nhb = h/8 + (h%8 ? 1 : 0);
+    uint8 (*yblocks)[64] = (uint8(*)[64]) malloc(nwb * nhb * 64);
+    uint8 (*ublocks)[64] = (uint8(*)[64]) malloc(nwb * nhb * 64);
+    uint8 (*vblocks)[64] = (uint8(*)[64]) malloc(nwb * nhb * 64);
+    assert(yblocks);
+    assert(ublocks);
+    assert(vblocks);
+    yuv_to_blocks8x8_2(y, u, v, w, h, yblocks, ublocks, vblocks);
+    //printf("----------print yblock----------\n");
+    //PRNT_BLOCKS(yblocks, nwb, nhb);
+    //printf("%d,%d\n", w, h);
+    //printf("end of blocks\n");
+
+    // blocks to dct
+    int (*ydct)[64] = (int(*)[64]) malloc(nwb * nhb * sizeof(int) * 64);
+    int (*udct)[64] = (int(*)[64]) malloc(nwb * nhb * sizeof(int) * 64);
+    int (*vdct)[64] = (int(*)[64]) malloc(nwb * nhb * sizeof(int) * 64);
+    assert(ydct);
+    assert(udct);
+    assert(vdct);
+    blocks_fdct(yblocks, ublocks, vblocks, w, h, ydct, udct, vdct); 
+    //printf("----------print ydct----------\n");
+    //PRNT_BLOCKS(ydct, nwb, nhb);
+    //printf("%d,%d\n", w, h);
+    //printf("end of dct\n");
+
+    // dct to quant
+    fdct_2_quant(ydct, udct, vdct, w, h);    
+    //printf("----------print quant----------\n");
+    //PRNT_BLOCKS(ydct, nwb, nhb);
+    //printf("%d,%d\n", w, h);
+    //printf("end of quant\n");
+
+    // quant to zigzag
+    quant_2_zigzag(ydct, udct, vdct, w, h);
+    printf("----------print zigzag----------\n");
+    PRNT_BLOCKS(ydct, nwb, nhb);
+    printf("%d,%d\n", w, h);
+    printf("end of zigzag\n");
+    
+
+    // free memory
+    free_rgb(r);
+    free_rgb(g);
+    free_rgb(b);
+    free(yblocks);
+    free(ublocks);
+    free(vblocks);
+    free(ydct);
+    free(udct);
+    free(vdct);
 }
