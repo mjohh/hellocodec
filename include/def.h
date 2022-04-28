@@ -2,6 +2,7 @@
 #define __def_h__
 
 typedef unsigned char uint8;
+typedef char int8;
 typedef unsigned int uint;
 typedef int bool;
 //typedef uint8 rgb[3];
@@ -20,6 +21,10 @@ struct yuv {
     uint8 v;
 };
 */
+struct rle_data {
+    int run_length;
+    int data;
+};
 
 #define BOUND(v, min, max)\
     (v)<=(min) ? (min) : ((v)>=(max) ? (max) :(v))

@@ -25,12 +25,36 @@ int main() {
     return 0;
 }
 */
-
+void bittest() {
+    char a = 5;
+    char b = -5;
+    char c = ~(b-1);
+    
+    int sz = 0;
+    for (int i=7; i>=0; i--) {
+        if (1<<i & a){
+            sz = i+1;
+            break;
+        }
+    }
+    int mask = 0;
+    for (int i=0; i<sz; i++) {
+        mask += 1<<i;
+    }
+    int d = (b - 1) & mask;
+    printf("sz of 5 is %d\n", sz);
+    printf("%d,%d\n", a, b);  
+    printf("%d\n", c); 
+    printf("%d\n", d);
+}
 
 extern void test_yuv_to_blocks();
 extern void test_yuv_to_blocks8x8();
 extern void test_yuv_to_blocks8x8_2();
 extern void test_codec_pipeline();
+extern void test_vli_encode();
+extern void test_ac_rle_encode();
+extern void test_tbl();
 
 int main() {
     // test_rgb_yuv();
@@ -38,6 +62,10 @@ int main() {
     // test_yuv_to_blocks();
     // test_yuv_to_blocks8x8();
     // test_yuv_to_blocks8x8_2();
-    test_codec_pipeline();
+    // test_codec_pipeline();
+    // bittest();
+    // test_vli_encode();
+    // test_ac_rle_encode();
+    test_tbl();
 }
 
